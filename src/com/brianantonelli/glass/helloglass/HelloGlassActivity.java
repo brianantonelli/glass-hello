@@ -20,6 +20,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.media.AudioManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.speech.tts.TextToSpeech;
 import android.view.View;
 import android.view.KeyEvent;
@@ -28,38 +29,44 @@ import android.widget.TextView;
 import com.google.android.glass.app.Card;
 import com.google.android.glass.media.Sounds;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 /**
  * Main activity.
  */
 public class HelloGlassActivity extends Activity {
-  private Card _card;
+    private Card _card;
     private View _cardView;
     private TextView _statusTextView;
+
     private TextToSpeech _speech;
     private Context _context = this;
+    private final SimpleDateFormat TF = new SimpleDateFormat("h:m a");
+
+    private String getTime(){
+        return TF.format(new Date());
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        final String time = getTime();
+
         // Even though the text-to-speech engine is only used in response to a menu action, we
         // initialize it when the application starts so that we avoid delays that could occur
         // if we waited until it was needed to start it up.
         _speech = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
-        @Override
-        public void onInit(int status) {
-        _speech.speak("Hello, World. Brian coded this..", TextToSpeech.QUEUE_FLUSH, null);
-        }
+            @Override
+            public void onInit(int status) {
+                speak("Hello Glass! The time is: " + time);
+            }
         });
 
-        //_card = new Card(_context);
-        //_card.setText(R.string.app_name);
-        //_cardView = _card.toView();
-        //setContentView(_cardView);
-
-        // An alternative way to layout the UX
         setContentView(R.layout.layout_helloworld);
         _statusTextView = (TextView)findViewById(R.id.status);
+        setText(time);
     }
 
     /**
@@ -68,37 +75,52 @@ public class HelloGlassActivity extends Activity {
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         switch (keyCode) {
+            // swipes
             case KeyEvent.KEYCODE_TAB:
                 if(event.isShiftPressed()){
-                    _statusTextView.setText(R.string.touchpad_touched);
-                    _speech.speak("Touchpad swipe left", TextToSpeech.QUEUE_FLUSH, null);
+                    speak("Swipe left");
+                    setText("Swipe left");
+                    setText(getTime(), 5);
                 }
                 else{
-                    _statusTextView.setText(R.string.touchpad_touched);
-                    _speech.speak("Touchpad swipe right", TextToSpeech.QUEUE_FLUSH, null);
+                    speak("Swipe right");
+                    setText("Swipe right");
+                    setText(getTime(), 5);
                 }
                 return true;
-            // Handle tap events.
+            // taps
             case KeyEvent.KEYCODE_DPAD_CENTER:
             case KeyEvent.KEYCODE_ENTER:
-
-                // Change the text of the card when the touchpad is touched
-                //_card.setText(R.string.touchpad_touched);
-                //_cardView = _card.toView();
-                //setContentView(_cardView);
-
-                // Status message below the main text in the alternative UX layout
                 AudioManager audio = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
                 audio.playSoundEffect(Sounds.TAP);
 
                 _statusTextView.setText(R.string.touchpad_touched);
-
-                _speech.speak("Touchpad touched", TextToSpeech.QUEUE_FLUSH, null);
+                speak("Touched");
+                setText("Touched");
+                setText(getTime(), 5);
 
                 return true;
             default:
                 return super.onKeyDown(keyCode, event);
         }
+    }
+
+    private void speak(String text){
+        _speech.speak(text, TextToSpeech.QUEUE_FLUSH, null);
+    }
+
+    private void setText(String text){
+        _statusTextView.setText(text);
+    }
+
+    private void setText(final String text, int delay){
+        final Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                _statusTextView.setText(text);
+            }
+        }, delay * 1000);
     }
 
     @Override
